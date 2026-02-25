@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
 from rich.rule import Rule
+from rich.table import Table
 
-from comply_with_me.downloaders import SERVICES, SERVICES_BY_KEY
+from comply_with_me.downloaders import SERVICES, SERVICES_BY_KEY, ServiceDef
 from comply_with_me.downloaders.base import DownloadResult
 from comply_with_me.state import StateFile
 
@@ -59,6 +61,91 @@ def _print_result(result: DownloadResult, dry_run: bool) -> None:
 
     if not any([result.downloaded, result.skipped, result.errors, result.manual_required]):
         _console.print("  [dim]Nothing to do.[/dim]")
+
+
+def _human_size(n: int) -> str:
+    size = float(n)
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024:
+            return f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} TB"
+
+
+def _fmt_dt(iso: str) -> str:
+    return datetime.fromisoformat(iso).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _status_entries(entries: dict, svc: ServiceDef) -> dict:
+    """Filter state entries belonging to a specific service."""
+    prefix = svc.subdir + "/"
+    return {k: v for k, v in entries.items() if k.startswith(prefix)}
+
+
+def _print_status_summary(entries: dict) -> None:
+    """Print a one-row-per-framework summary table."""
+    table = Table(show_header=True, header_style="bold", box=None, pad_edge=False)
+    table.add_column("Framework", style="cyan", min_width=28)
+    table.add_column("Files", justify="right")
+    table.add_column("Size", justify="right", min_width=10)
+    table.add_column("Last Synced")
+
+    total_files = 0
+    total_size = 0
+    synced = 0
+
+    for svc in SERVICES:
+        svc_entries = _status_entries(entries, svc)
+        if not svc_entries:
+            table.add_row(svc.label, "[dim]--[/dim]", "[dim]--[/dim]", "[dim]never[/dim]")
+            continue
+        count = len(svc_entries)
+        size = sum(e["size"] for e in svc_entries.values())
+        last = max(e["recorded_at"] for e in svc_entries.values())
+        total_files += count
+        total_size += size
+        synced += 1
+        table.add_row(svc.label, str(count), _human_size(size), _fmt_dt(last))
+
+    _console.print(Rule("[bold]cwm status[/bold]"))
+    _console.print(table)
+    _console.print(Rule())
+    _console.print(
+        f"[dim]Total: {total_files} files  {_human_size(total_size)}"
+        f"  across {synced} framework(s)[/dim]"
+    )
+
+
+def _print_status_detail(entries: dict, svc: ServiceDef) -> None:
+    """Print a per-file detail table for one framework."""
+    svc_entries = _status_entries(entries, svc)
+    _console.print(Rule(f"[bold cyan]{svc.label}[/bold cyan]"))
+
+    if not svc_entries:
+        _console.print(
+            f"  [dim]No files synced yet. Run [bold]cwm sync {svc.key}[/bold] to get started.[/dim]"
+        )
+        return
+
+    table = Table(show_header=True, header_style="bold", box=None, pad_edge=False)
+    table.add_column("File", no_wrap=False)
+    table.add_column("Size", justify="right", min_width=10)
+    table.add_column("Last Synced")
+
+    total_size = 0
+    prefix = svc.subdir + "/"
+    for key in sorted(svc_entries):
+        entry = svc_entries[key]
+        total_size += entry["size"]
+        table.add_row(
+            key[len(prefix):],
+            _human_size(entry["size"]),
+            _fmt_dt(entry["recorded_at"]),
+        )
+
+    _console.print(table)
+    _console.print(Rule())
+    _console.print(f"[dim]{len(svc_entries)} files  {_human_size(total_size)}[/dim]")
 
 
 def _run_service(key: str, output_dir: Path, dry_run: bool, force: bool) -> DownloadResult:
@@ -146,9 +233,24 @@ def status(
     ] = Path("source-content"),
 ) -> None:
     """Show per-framework download inventory and last sync date."""
-    # Stub — implemented in issue #10
-    target = framework or "all"
-    _console.print(f"[dim][stub] status {target} — not yet implemented (issue #10)[/dim]")
+    if framework is not None and framework not in SERVICES_BY_KEY:
+        _console.print(
+            f"[red]Error:[/red] unknown framework '{framework}'. Options: {_KEYS_DISPLAY}"
+        )
+        raise typer.Exit(1)
+
+    entries = StateFile(output_dir).entries()
+
+    if not entries:
+        _console.print(
+            "[dim]No sync history found. Run [bold]cwm sync[/bold] to get started.[/dim]"
+        )
+        return
+
+    if framework is None:
+        _print_status_summary(entries)
+    else:
+        _print_status_detail(entries, SERVICES_BY_KEY[framework])
 
 
 if __name__ == "__main__":
