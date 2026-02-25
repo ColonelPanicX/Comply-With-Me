@@ -1,4 +1,10 @@
-"""CMMC resources downloader (requires Playwright — DoD portal blocks plain requests)."""
+"""CMMC resources downloader.
+
+Fetch strategy (in order):
+1. Plain requests.get() — fast, no dependencies, works if DoD hasn't blocked the UA
+2. Playwright headless browser — fallback if plain request is access-denied
+3. manual_required — surfaces the source URL if both methods are blocked
+"""
 
 from __future__ import annotations
 
@@ -35,7 +41,27 @@ SECTION_MODULES = {
 _ACCESS_DENIED_TITLE = "access denied"
 
 
-def _fetch_html() -> str:
+def _fetch_html_plain() -> Optional[str]:
+    """Try fetching the page with plain requests.
+
+    Returns the response text, or None if the request fails or returns non-200.
+    Does NOT check for access-denied content — caller handles that.
+    """
+    try:
+        resp = requests.get(
+            SOURCE_URL,
+            headers={"User-Agent": USER_AGENT},
+            timeout=REQUEST_TIMEOUT,
+        )
+        if resp.status_code == 200:
+            return resp.text
+        return None
+    except requests.RequestException:
+        return None
+
+
+def _fetch_html_playwright() -> str:
+    """Fetch page HTML using a Playwright headless browser."""
     require_playwright()
     from playwright.sync_api import sync_playwright
 
@@ -84,6 +110,29 @@ def _parse_links(html: str) -> list[tuple[str, str, str]]:
             links.append((section, filename, url))
 
     return links
+
+
+def _requests_download(
+    links: list[tuple[str, str, str]],
+    dest: Path,
+    force: bool,
+    state: Optional["StateFile"] = None,
+) -> DownloadResult:
+    """Download files via plain HTTP requests."""
+    result = DownloadResult(framework="cmmc")
+    session = requests.Session()
+
+    for _section, filename, url in links:
+        target = dest / filename
+        ok, msg = download_file(session, url, target, force=force, referer=SOURCE_URL, state=state)
+        if msg == "skipped":
+            result.skipped.append(filename)
+        elif ok:
+            result.downloaded.append(filename)
+        else:
+            result.manual_required.append((filename, url))
+
+    return result
 
 
 def _playwright_download(
@@ -161,22 +210,27 @@ def run(
     dest = output_dir / "cmmc"
     result = DownloadResult(framework="cmmc")
 
-    html = _fetch_html()
+    # --- Step 1: try plain requests ---
+    html = _fetch_html_plain()
+    use_playwright = False
+
+    if html is None or _is_access_denied(html):
+        # --- Step 2: fall back to Playwright ---
+        try:
+            html = _fetch_html_playwright()
+            use_playwright = True
+        except Exception:  # noqa: BLE001
+            result.manual_required.append(("CMMC Resources page", SOURCE_URL))
+            return result
 
     if _is_access_denied(html):
-        # The DoD portal blocks all automated access (headless browsers, bots).
-        # Surface the source URL so the user can download manually.
-        result.manual_required.append(
-            ("CMMC Resources page", SOURCE_URL)
-        )
+        result.manual_required.append(("CMMC Resources page", SOURCE_URL))
         return result
 
     links = _parse_links(html)
 
     if not links:
-        result.manual_required.append(
-            ("CMMC Resources page (no links detected)", SOURCE_URL)
-        )
+        result.manual_required.append(("CMMC Resources page (no links detected)", SOURCE_URL))
         return result
 
     if dry_run:
@@ -189,4 +243,6 @@ def run(
         return result
 
     dest.mkdir(parents=True, exist_ok=True)
-    return _playwright_download(links, dest, force, state)
+    if use_playwright:
+        return _playwright_download(links, dest, force, state)
+    return _requests_download(links, dest, force, state)
