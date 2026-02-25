@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
-
-from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from comply_with_me.state import StateFile
@@ -122,7 +121,9 @@ def _playwright_download(
             if locator.count() == 0:
                 # Link not found in live page — try direct HTTP download
                 session = requests.Session()
-                ok, msg = download_file(session, url, target, force=force, referer=SOURCE_URL, state=state)
+                ok, msg = download_file(
+                    session, url, target, force=force, referer=SOURCE_URL, state=state
+                )
                 if msg == "skipped":
                     result.skipped.append(filename)
                 elif ok:

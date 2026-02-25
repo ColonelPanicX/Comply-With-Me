@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import concurrent.futures
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
-
-from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from comply_with_me.state import StateFile

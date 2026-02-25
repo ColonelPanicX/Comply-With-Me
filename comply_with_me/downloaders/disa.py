@@ -6,11 +6,10 @@ import calendar
 import re
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 from urllib.parse import urlparse
 
 import requests
-
-from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from comply_with_me.state import StateFile
