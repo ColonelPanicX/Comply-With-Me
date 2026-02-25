@@ -19,8 +19,24 @@ app = typer.Typer(
     name="cwm",
     help="Download and sync compliance framework documentation.",
     add_completion=False,
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
+
+
+@app.callback()
+def root(
+    ctx: typer.Context,
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output-dir", help="Root directory for downloaded files (TUI mode)."),
+    ] = Path("source-content"),
+) -> None:
+    """Launch the interactive TUI. Pass a subcommand for non-interactive use."""
+    if ctx.invoked_subcommand is None:
+        from comply_with_me.tui.app import CwmApp
+
+        CwmApp(output_dir=output_dir).run()
 
 _KEYS = [s.key for s in SERVICES]
 _KEYS_DISPLAY = " | ".join(_KEYS) + " | all"
