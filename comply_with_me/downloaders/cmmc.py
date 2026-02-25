@@ -1,7 +1,8 @@
-"""CMMC resources downloader (requires Playwright — DoD portal blocks headless requests)."""
+"""CMMC resources downloader (requires Playwright — DoD portal blocks plain requests)."""
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
@@ -20,19 +21,14 @@ from .base import (
 SOURCE_URL = "https://dodcio.defense.gov/cmmc/Resources-Documentation/"
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
 
-# DNN CMS module IDs for the two sections on the CMMC resources page
+# DNN CMS module IDs for the two content sections on the CMMC resources page.
+# These may need updating if the DoD site is redesigned.
 SECTION_MODULES = {
     "internal": "dnn_ctr136430_ModuleContent",
     "external": "dnn_ctr136428_ModuleContent",
 }
 
-# These three PDFs are reliably blocked by the DoD portal in headless mode.
-# They are tracked here so they can be surfaced as manual-download instructions.
-KNOWN_BLOCKED = {
-    "CMMC-FAQsv3.pdf",
-    "CMMC-101-Nov2025.pdf",
-    "FulcrumAdvStrat.pdf",
-}
+_ACCESS_DENIED_TITLE = "access denied"
 
 
 def _fetch_html() -> str:
@@ -46,6 +42,15 @@ def _fetch_html() -> str:
         html = page.content()
         browser.close()
     return html
+
+
+def _is_access_denied(html: str) -> bool:
+    """Return True if the DoD portal returned an Access Denied page."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
+    title = soup.find("title")
+    return title is not None and _ACCESS_DENIED_TITLE in title.get_text().lower()
 
 
 def _parse_links(html: str) -> list[tuple[str, str, str]]:
@@ -85,7 +90,6 @@ def _playwright_download(
     from playwright.sync_api import sync_playwright
 
     result = DownloadResult(framework="cmmc")
-    import time
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
@@ -101,7 +105,7 @@ def _playwright_download(
 
             locator = page.locator(f"a[href='{url}']")
             if locator.count() == 0:
-                # Link not clickable via Playwright — try direct HTTP download
+                # Link not found in live page — try direct HTTP download
                 session = requests.Session()
                 ok, msg = download_file(session, url, target, force=force, referer=SOURCE_URL)
                 if msg == "skipped":
@@ -109,10 +113,7 @@ def _playwright_download(
                 elif ok:
                     result.downloaded.append(filename)
                 else:
-                    if filename in KNOWN_BLOCKED:
-                        result.manual_required.append((filename, url))
-                    else:
-                        result.errors.append((filename, msg))
+                    result.manual_required.append((filename, url))
                 continue
 
             try:
@@ -126,10 +127,7 @@ def _playwright_download(
                     raise OSError("Empty file")
                 result.downloaded.append(filename)
             except Exception as exc:  # noqa: BLE001
-                if filename in KNOWN_BLOCKED:
-                    result.manual_required.append((filename, url))
-                else:
-                    result.errors.append((filename, str(exc)))
+                result.errors.append((filename, str(exc)))
 
         browser.close()
 
@@ -138,17 +136,27 @@ def _playwright_download(
 
 def run(output_dir: Path, dry_run: bool = False, force: bool = False) -> DownloadResult:
     dest = output_dir / "cmmc"
+    result = DownloadResult(framework="cmmc")
 
     html = _fetch_html()
+
+    if _is_access_denied(html):
+        # The DoD portal blocks all automated access (headless browsers, bots).
+        # Surface the source URL so the user can download manually.
+        result.manual_required.append(
+            ("CMMC Resources page", SOURCE_URL)
+        )
+        return result
+
     links = _parse_links(html)
 
     if not links:
-        result = DownloadResult(framework="cmmc")
-        result.errors.append(("", "No downloadable links found on CMMC page"))
+        result.manual_required.append(
+            ("CMMC Resources page (no links detected)", SOURCE_URL)
+        )
         return result
 
     if dry_run:
-        result = DownloadResult(framework="cmmc")
         for _section, filename, _url in links:
             target = dest / filename
             if target.exists() and target.stat().st_size > 0 and not force:

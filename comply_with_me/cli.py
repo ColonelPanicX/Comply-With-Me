@@ -47,15 +47,13 @@ def _print_result(result: DownloadResult, dry_run: bool) -> None:
             _console.print(f"    [red]✗[/red] {name}: {reason}")
 
     if result.manual_required:
+        _console.print("\n  [yellow]Manual download required:[/yellow]")
+        for label, url in result.manual_required:
+            _console.print(f"    [yellow]→[/yellow] {label}")
+            _console.print(f"      {url}")
         _console.print(
-            f"\n  [yellow]Manual download required[/yellow] "
-            f"({len(result.manual_required)} file(s) blocked by server):"
-        )
-        for filename, url in result.manual_required:
-            _console.print(f"    [yellow]→[/yellow] {filename}")
-            _console.print(f"      URL: {url}")
-        _console.print(
-            "  Place files in [bold]source-content/cmmc/[/bold] after manual download."
+            f"  Place downloaded files in "
+            f"[bold]source-content/{result.framework}/[/bold] when done."
         )
 
     if not any([result.downloaded, result.skipped, result.errors, result.manual_required]):
