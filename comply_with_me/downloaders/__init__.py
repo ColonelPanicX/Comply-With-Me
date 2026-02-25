@@ -18,14 +18,15 @@ class ServiceDef:
     key: str
     label: str
     runner: Callable[[Path, bool, bool, Optional["StateFile"]], DownloadResult]
+    subdir: str  # path prefix under output_dir used by this downloader
 
 
 SERVICES: list[ServiceDef] = [
-    ServiceDef("fedramp", "FedRAMP", fedramp.run),
-    ServiceDef("nist-finals", "NIST Final Publications", nist.run_finals),
-    ServiceDef("nist-drafts", "NIST Draft Publications", nist.run_drafts),
-    ServiceDef("cmmc", "CMMC", cmmc.run),
-    ServiceDef("disa", "DISA STIGs", disa.run),
+    ServiceDef("fedramp", "FedRAMP", fedramp.run, "fedramp"),
+    ServiceDef("nist-finals", "NIST Final Publications", nist.run_finals, "nist/final-pubs"),
+    ServiceDef("nist-drafts", "NIST Draft Publications", nist.run_drafts, "nist/draft-pubs"),
+    ServiceDef("cmmc", "CMMC", cmmc.run, "cmmc"),
+    ServiceDef("disa", "DISA STIGs", disa.run, "disa-stigs"),
 ]
 
 SERVICES_BY_KEY: dict[str, ServiceDef] = {s.key: s for s in SERVICES}
