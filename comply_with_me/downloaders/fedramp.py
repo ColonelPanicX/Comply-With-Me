@@ -9,6 +9,11 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from comply_with_me.state import StateFile
+
 from .base import (
     REQUEST_RETRIES,
     REQUEST_TIMEOUT,
@@ -73,7 +78,12 @@ def _parse_links(html: str) -> list[tuple[str, str]]:
     return links
 
 
-def run(output_dir: Path, dry_run: bool = False, force: bool = False) -> DownloadResult:
+def run(
+    output_dir: Path,
+    dry_run: bool = False,
+    force: bool = False,
+    state: Optional["StateFile"] = None,
+) -> DownloadResult:
     result = DownloadResult(framework="fedramp")
     dest = output_dir / "fedramp"
 
@@ -87,7 +97,7 @@ def run(output_dir: Path, dry_run: bool = False, force: bool = False) -> Downloa
     if dry_run:
         for filename, _url in links:
             target = dest / filename
-            if target.exists() and target.stat().st_size > 0 and not force:
+            if not force and target.exists() and target.stat().st_size > 0:
                 result.skipped.append(filename)
             else:
                 result.downloaded.append(filename)
@@ -99,7 +109,7 @@ def run(output_dir: Path, dry_run: bool = False, force: bool = False) -> Downloa
     def _download(item: tuple[str, str]) -> tuple[str, bool, str]:
         filename, url = item
         target = dest / filename
-        ok, msg = download_file(session, url, target, force=force, referer=SOURCE_URL)
+        ok, msg = download_file(session, url, target, force=force, referer=SOURCE_URL, state=state)
         return filename, ok, msg
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=DOWNLOAD_WORKERS) as executor:
