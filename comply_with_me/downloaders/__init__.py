@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Optional
 
-from . import cmmc, disa, fedramp, nist
+from . import cisa_bod, cmmc, disa, fedramp, nist
 from .base import DownloadResult
 
 if TYPE_CHECKING:
@@ -27,6 +27,7 @@ SERVICES: list[ServiceDef] = [
     ServiceDef("nist-drafts", "NIST Draft Publications", nist.run_drafts, "nist/draft-pubs"),
     ServiceDef("cmmc", "CMMC", cmmc.run, "cmmc"),
     ServiceDef("disa", "DISA STIGs", disa.run, "disa-stigs"),
+    ServiceDef("cisa-bod", "CISA Binding Operational Directives", cisa_bod.run, "cisa-bod"),
 ]
 
 SERVICES_BY_KEY: dict[str, ServiceDef] = {s.key: s for s in SERVICES}
