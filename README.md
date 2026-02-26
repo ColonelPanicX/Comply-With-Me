@@ -11,6 +11,7 @@ A self-contained Python tool for downloading and syncing compliance framework do
 | NIST Draft Publications | csrc.nist.gov | IPD, 2PD series |
 | CMMC | dodcio.defense.gov | Full document library |
 | DISA STIGs | dl.dod.cyber.mil | Full SRG/STIG library (ZIP) |
+| CISA Binding Operational Directives | cisa.gov | All BODs and implementation guidance (HTML) |
 
 ## Requirements
 
@@ -71,7 +72,8 @@ source-content/
 │   ├── final-pubs/
 │   └── draft-pubs/
 ├── cmmc/
-└── disa-stigs/
+├── disa-stigs/
+└── cisa-bod/
 ```
 
 ## Known Limitations
