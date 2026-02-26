@@ -54,6 +54,7 @@ pnpm-debug.log*
 
 # Python tooling
 .venv/
+.cwm-venv/
 venv/
 .pytest_cache/
 .mypy_cache/
