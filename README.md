@@ -1,45 +1,81 @@
 # Comply With Me
 
-A CLI tool for downloading and syncing compliance framework documentation from official sources. Supports NIST, FedRAMP, CMMC, and DISA STIGs with smart diff-based sync — only pulls what's new since the last run.
+A self-contained Python tool for downloading and syncing compliance framework documentation from official sources. Tracks what you already have and only pulls what's new — no manual bookmarking, no hunting for PDFs.
 
 ## Supported Frameworks
 
-| Framework | Source | Notes |
+| Framework | Source | Coverage |
 |---|---|---|
+| FedRAMP Rev 5 | fedramp.gov | Documents and templates |
 | NIST Final Publications | csrc.nist.gov | SP, CSWP, AI series |
 | NIST Draft Publications | csrc.nist.gov | IPD, 2PD series |
-| FedRAMP Rev 5 | fedramp.gov | Documents and templates |
-| CMMC | dodcio.defense.gov | 17/20 PDFs automated; 3 require manual download |
-| DISA STIGs | dl.dod.cyber.mil | Full SRG-STIG library ZIP |
+| CMMC | dodcio.defense.gov | Full document library |
+| DISA STIGs | dl.dod.cyber.mil | Full SRG/STIG library (ZIP) |
 
 ## Requirements
 
-Python 3.9+
-
-```bash
-pip install -r requirements.txt
-python -m playwright install chromium
-```
+Python 3.9 or later. That's it — the tool handles everything else itself.
 
 ## Quick Start
 
 ```bash
-python scripts/comply-with-me.py
+python3 cwm.py
 ```
 
-Select a framework from the menu (or download all), confirm the diff, and the tool handles the rest. Downloaded files land in `source-content/<framework>/`.
+On first run, the tool will:
 
-## Running Individual Downloaders
+1. Create a local virtual environment (`.cwm-venv/`) next to the script
+2. Install its own dependencies into that environment
+3. Launch the menu
 
-Each downloader can also be run standalone. See the `README.md` in each subfolder:
+Every run after that goes straight to the menu — no activation, no setup.
 
-- `scripts/cmmc-auto-dl/`
-- `scripts/fedramp-auto-dl/`
-- `scripts/nist-auto-dl/`
-- `scripts/disa-stigs-auto-dl/`
+> **Debian/Ubuntu note:** If you see a message about `ensurepip`, run:
+> ```bash
+> sudo apt install python3.12-venv   # adjust version to match your Python
+> ```
+> Then run `python3 cwm.py` again.
+
+## Usage
+
+```
+Comply With Me
+----------------------------------------------------
+  1. FedRAMP                          36 files  37.5 MB  last synced 2026-02-25
+  2. NIST Final Publications          653 files  2.1 GB  last synced 2026-02-25
+  3. NIST Draft Publications           92 files  146.0 MB  last synced 2026-02-25
+  4. CMMC                              17 files  18.3 MB  last synced 2026-02-25
+  5. DISA STIGs                         1 files  350.0 MB  last synced 2026-02-25
+
+  6. Sync All
+  0. Quit
+
+Select:
+```
+
+Select a number to sync that framework, or choose **Sync All** to pull everything at once. Downloaded files land in `source-content/<framework>/`. The tool skips files it already has and only downloads what's changed or new.
+
+## How It Works
+
+- **State tracking:** A `.cwm-state.json` file in `source-content/` records the hash and metadata of every downloaded file. On each sync, files are compared by hash — unchanged files are skipped.
+- **CMMC fallback:** The DoD portal uses WAF protection that blocks automated scrapers. The tool first attempts a live scrape; if that fails, it falls back to a curated list of known PDF URLs. A notice is printed when the fallback is used, along with the date the list was last verified.
+- **DISA STIGs:** Downloads the full SRG/STIG archive ZIP from the DoD Cyber Exchange. This is a large file (~350 MB).
+
+## Output Structure
+
+```
+source-content/
+├── .cwm-state.json
+├── fedramp/
+├── nist/
+│   ├── final-pubs/
+│   └── draft-pubs/
+├── cmmc/
+└── disa-stigs/
+```
 
 ## Known Limitations
 
-- **CMMC:** Three PDFs (`CMMC-FAQsv3.pdf`, `CMMC-101-Nov2025.pdf`, `FulcrumAdvStrat.pdf`) are blocked by the DoD portal in headless mode. Download them manually and place in `source-content/cmmc/`.
-- **NIST:** A small number of publications have no direct download link on CSRC; these are marked `N/A` in the manifest.
-- **DISA STIGs:** The probe window covers recent months. If DISA changes the archive naming convention, the probe logic in `disa-stigs-auto-dl.py` will need updating.
+- **DISA STIGs:** The probe logic searches recent months for the current archive. If DISA changes their naming convention, the downloader may need an update.
+- **CMMC:** If live scraping fails and the fallback URL list is stale, some newer documents may be missed. The tool prints a notice with the verification date when this occurs.
+- **NIST:** A small number of publications have no direct download link on CSRC and will be skipped.
