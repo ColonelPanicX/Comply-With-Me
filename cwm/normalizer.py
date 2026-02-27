@@ -3,8 +3,10 @@
 Supported source formats:
   - PDF  (.pdf)  — text extracted page-by-page via pymupdf
   - HTML (.html) — main content extracted via BeautifulSoup
+  - JSON (.json) — OSCAL catalog and profile documents
 
-Unsupported formats are skipped with a notice (ZIP, DOCX, XLSX, XML).
+Unsupported formats are skipped with a notice (ZIP, DOCX, XLSX, XML, and
+JSON files that are not OSCAL catalog/profile documents).
 DISA STIGs are excluded from v1 normalization — their XCCDF XML structure
 requires a dedicated parser (future work).
 
@@ -27,7 +29,8 @@ SKIP_SUBDIRS: set[str] = {"disa-stigs"}
 # File extensions this normalizer handles
 PDF_EXTENSIONS = {".pdf"}
 HTML_EXTENSIONS = {".html", ".htm"}
-SUPPORTED_EXTENSIONS = PDF_EXTENSIONS | HTML_EXTENSIONS
+JSON_EXTENSIONS = {".json"}
+SUPPORTED_EXTENSIONS = PDF_EXTENSIONS | HTML_EXTENSIONS | JSON_EXTENSIONS
 
 # Extensions that are present in source dirs but intentionally skipped
 KNOWN_UNSUPPORTED = {".zip", ".doc", ".docx", ".xlsx", ".xls", ".xml"}
@@ -157,6 +160,116 @@ def _extract_html(path: Path) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# OSCAL JSON extraction
+# ---------------------------------------------------------------------------
+
+
+class _UnsupportedOscalType(Exception):
+    """Raised when a JSON file is not a recognized OSCAL catalog or profile."""
+
+
+def _collect_prose(part: dict) -> str:
+    """Recursively collect all prose text from an OSCAL part and its sub-parts."""
+    lines: list[str] = []
+    prose = (part.get("prose") or "").strip()
+    if prose:
+        lines.append(prose)
+    for subpart in part.get("parts", []):
+        sub = _collect_prose(subpart)
+        if sub:
+            lines.append(sub)
+    return "\n".join(lines)
+
+
+def _extract_control_sections(control: dict, level: int) -> list[dict]:
+    """Return sections for a control and its enhancements (recursively)."""
+    sections: list[dict] = []
+    cid = control.get("id", "").upper()
+    title = control.get("title", "")
+    heading = f"{cid}: {title}" if cid else title
+
+    # Collect statement and guidance prose (skip assessment parts)
+    text_parts: list[str] = []
+    for part in control.get("parts", []):
+        name = part.get("name", "")
+        if name in ("statement", "guidance"):
+            prose = _collect_prose(part)
+            if prose:
+                text_parts.append(f"**{name.title()}**\n{prose}")
+
+    content = "\n\n".join(text_parts)
+    if heading and content:
+        sections.append({"heading": heading, "level": level, "content": content})
+
+    # Recursively process enhancements (child controls)
+    for enhancement in control.get("controls", []):
+        sections.extend(_extract_control_sections(enhancement, level + 1))
+
+    return sections
+
+
+def _extract_catalog(catalog: dict) -> list[dict]:
+    """Extract an OSCAL catalog into one section per control."""
+    sections: list[dict] = []
+    for group in catalog.get("groups", []):
+        for control in group.get("controls", []):
+            sections.extend(_extract_control_sections(control, level=2))
+    return sections
+
+
+def _extract_profile(profile: dict) -> list[dict]:
+    """Extract an OSCAL profile into sections grouped by control family."""
+    title = profile.get("metadata", {}).get("title", "Unknown Profile")
+
+    all_ids: list[str] = []
+    for imp in profile.get("imports", []):
+        for ic in imp.get("include-controls", []):
+            all_ids.extend(ic.get("with-ids", []))
+
+    if not all_ids:
+        return [{"heading": title, "level": 1, "content": "No control IDs found in profile."}]
+
+    # Group by family prefix (ac, at, au, ...)
+    families: dict[str, list[str]] = {}
+    for cid in sorted(all_ids):
+        family = cid.split("-")[0].upper()
+        families.setdefault(family, []).append(cid)
+
+    sections: list[dict] = [
+        {
+            "heading": title,
+            "level": 1,
+            "content": (
+                f"Total controls: {len(all_ids)}\n"
+                f"Families: {', '.join(sorted(families.keys()))}"
+            ),
+        }
+    ]
+    for family, ids in sorted(families.items()):
+        sections.append({"heading": f"{family} Controls", "level": 2, "content": ", ".join(ids)})
+
+    return sections
+
+
+def _extract_oscal_json(path: Path) -> list[dict]:
+    """Extract an OSCAL JSON document (catalog or profile) into sections.
+
+    Raises _UnsupportedOscalType for non-OSCAL or unrecognized document types.
+    Raises RuntimeError on parse failures.
+    """
+    try:
+        data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception as exc:
+        raise RuntimeError(f"JSON parse failed: {exc}") from exc
+
+    if "catalog" in data:
+        return _extract_catalog(data["catalog"])
+    if "profile" in data:
+        return _extract_profile(data["profile"])
+    raise _UnsupportedOscalType(f"not a recognized OSCAL catalog or profile: {path.name}")
+
+
+# ---------------------------------------------------------------------------
 # Output writers
 # ---------------------------------------------------------------------------
 
@@ -239,8 +352,12 @@ def _normalize_file(
     try:
         if ext in PDF_EXTENSIONS:
             sections = _extract_pdf(source_path)
+        elif ext in JSON_EXTENSIONS:
+            sections = _extract_oscal_json(source_path)
         else:
             sections = _extract_html(source_path)
+    except _UnsupportedOscalType:
+        return "unsupported", name
     except RuntimeError as exc:
         return "error", str(exc)
 
