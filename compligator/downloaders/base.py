@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Optional
 import requests
 
 if TYPE_CHECKING:
-    from cwm.state import StateFile
+    from compligator.state import StateFile
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "

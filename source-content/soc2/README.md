@@ -4,7 +4,7 @@
 
 The SOC 2 Trust Services Criteria (TSC) is published by the American Institute of Certified Public Accountants (AICPA). The 2017 TSC document (updated 2022) is **not freely available** — it requires an AICPA membership or purchase.
 
-comply-with-me cannot automate the download of paywalled content.
+CompliGator cannot automate the download of paywalled content.
 
 ## How to obtain
 

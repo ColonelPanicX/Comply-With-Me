@@ -1,4 +1,4 @@
-"""Comply With Me — compliance document downloader."""
+"""CompliGator — compliance document aggregator."""
 
 from __future__ import annotations
 
@@ -24,12 +24,12 @@ def _check_dependencies() -> None:
             missing_pkgs.append(pkg_name)
 
     if missing_pkgs:
-        print("Comply With Me is missing required packages:\n")
+        print("CompliGator is missing required packages:\n")
         for pkg in missing_pkgs:
             print(f"  - {pkg}")
         print()
-        print("Run the tool via comply_with_me.py to install automatically:")
-        print("  python3 comply_with_me.py")
+        print("Run the tool via compligator.py to install automatically:")
+        print("  python3 compligator.py")
         print()
         sys.exit(1)
 
@@ -49,7 +49,7 @@ def _human_size(n: int) -> str:
 
 def _print_menu(services, entries: dict) -> None:
     print()
-    print("Comply With Me")
+    print("CompliGator")
     print("-" * 52)
 
     for i, svc in enumerate(services, 1):
@@ -102,7 +102,7 @@ def _run_sync(svc, output_dir: Path, state) -> None:
 
 
 def _run_normalize(source_dir: Path, output_dir: Path) -> None:
-    from cwm.normalizer import normalize_all
+    from compligator.normalizer import normalize_all
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -149,8 +149,8 @@ def main() -> None:
     _check_dependencies()
 
     # Lazy imports — only reached if dependencies are present
-    from cwm.downloaders import SERVICES
-    from cwm.state import StateFile
+    from compligator.downloaders import SERVICES
+    from compligator.state import StateFile
 
     source_dir = Path("source-content")
     normalized_dir = Path("normalized-content")

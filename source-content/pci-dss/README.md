@@ -2,7 +2,7 @@
 
 ## Why this directory is empty
 
-PCI DSS (Payment Card Industry Data Security Standard) v4.0 is published by the PCI Security Standards Council (PCI SSC). The documents are **free to download but require registration** on the PCI SSC website. Because registration is required, comply-with-me cannot automate the download without credentials.
+PCI DSS (Payment Card Industry Data Security Standard) v4.0 is published by the PCI Security Standards Council (PCI SSC). The documents are **free to download but require registration** on the PCI SSC website. Because registration is required, CompliGator cannot automate the download without credentials.
 
 ## How to obtain
 

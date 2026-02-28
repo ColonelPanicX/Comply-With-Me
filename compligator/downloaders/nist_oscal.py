@@ -1,16 +1,13 @@
-"""FedRAMP automation artifacts downloader.
+"""NIST OSCAL content downloader.
 
-Downloads Rev 5 OSCAL content and guide documents from the GSA/fedramp-automation
-GitHub repository:
-
-  baselines/   — OSCAL profiles and resolved catalogs (HIGH/MODERATE/LOW/LI-SaaS)
-  resources/   — FedRAMP extensions, threats, values, and information types
-  templates/   — OSCAL templates (SSP, SAP, SAR, POAM)
-  guides/      — OSCAL implementation guide PDFs
+Downloads structured OSCAL artifacts from the usnistgov/oscal-content GitHub
+repository. Covers SP 800-53 Rev 5, SP 800-171 Rev 3, SP 800-218 Ver 1, and
+CSF v2.0 — all in OSCAL JSON format (non-minified).
 
 The GitHub API is used to discover file listings; actual downloads come from
-raw.githubusercontent.com. Set the GITHUB_TOKEN environment variable to raise
-the unauthenticated API rate limit from 60 to 5,000 requests/hour if needed.
+raw.githubusercontent.com and are not subject to API rate limits. Set the
+GITHUB_TOKEN environment variable to increase the API rate limit from 60 to
+5,000 requests/hour if needed (unlikely given the small number of API calls).
 """
 
 from __future__ import annotations
@@ -22,7 +19,7 @@ from typing import TYPE_CHECKING, Optional
 import requests
 
 if TYPE_CHECKING:
-    from cwm.state import StateFile
+    from compligator.state import StateFile
 
 from .base import (
     REQUEST_TIMEOUT,
@@ -31,18 +28,15 @@ from .base import (
     download_file,
 )
 
-SOURCE_URL = "https://github.com/GSA/fedramp-automation"
-REPO_API_BASE = "https://api.github.com/repos/GSA/fedramp-automation/contents"
+SOURCE_URL = "https://github.com/usnistgov/oscal-content"
+REPO_API_BASE = "https://api.github.com/repos/usnistgov/oscal-content/contents/nist.gov"
 
-# (GitHub API path, local subdir under dest, file extensions to include)
-CONTENT_SETS: list[tuple[str, str, set[str]]] = [
-    ("dist/content/rev5/baselines/json",    "baselines",  {".json"}),
-    ("dist/content/rev5/resources/json",    "resources",  {".json"}),
-    ("dist/content/rev5/templates/ssp/json", "templates", {".json"}),
-    ("dist/content/rev5/templates/sap/json", "templates", {".json"}),
-    ("dist/content/rev5/templates/sar/json", "templates", {".json"}),
-    ("dist/content/rev5/templates/poam/json", "templates", {".json"}),
-    ("documents/rev5",                      "guides",     {".pdf"}),
+# (GitHub API path relative to REPO_API_BASE, local subdir under dest)
+CONTENT_SETS: list[tuple[str, str]] = [
+    ("SP800-53/rev5/json",  "SP800-53/rev5"),
+    ("SP800-171/rev3/json", "SP800-171/rev3"),
+    ("SP800-218/ver1/json", "SP800-218/ver1"),
+    ("CSF/v2.0/json",       "CSF/v2.0"),
 ]
 
 
@@ -60,11 +54,10 @@ def _api_headers() -> dict[str, str]:
     return headers
 
 
-def _list_files(api_path: str, include_ext: set[str]) -> list[tuple[str, str]]:
-    """Return (filename, download_url) for matching files in a repo directory.
+def _list_json_files(api_path: str) -> list[tuple[str, str]]:
+    """Return (filename, download_url) for non-minified JSON files in an OSCAL content dir.
 
-    Skips minified JSON variants (*-min.json) and subdirectories.
-    Raises RuntimeError on API errors.
+    Raises RuntimeError on API errors (rate limit, network failure).
     """
     url = f"{REPO_API_BASE}/{api_path}"
     try:
@@ -84,7 +77,7 @@ def _list_files(api_path: str, include_ext: set[str]) -> list[tuple[str, str]]:
         (item["name"], item["download_url"])
         for item in resp.json()
         if item["type"] == "file"
-        and Path(item["name"]).suffix.lower() in include_ext
+        and item["name"].endswith(".json")
         and not item["name"].endswith("-min.json")
     ]
 
@@ -100,14 +93,14 @@ def run(
     force: bool = False,
     state: Optional["StateFile"] = None,
 ) -> DownloadResult:
-    dest = output_dir / "fedramp-github"
-    result = DownloadResult(framework="fedramp-github")
+    dest = output_dir / "nist-oscal"
+    result = DownloadResult(framework="nist-oscal")
 
     # Discover all files via GitHub API
     all_links: list[tuple[str, str, str]] = []  # (filename, url, subdir)
-    for api_path, subdir, include_ext in CONTENT_SETS:
+    for api_path, subdir in CONTENT_SETS:
         try:
-            for filename, url in _list_files(api_path, include_ext):
+            for filename, url in _list_json_files(api_path):
                 all_links.append((filename, url, subdir))
         except RuntimeError as exc:
             result.errors.append(("", str(exc)))

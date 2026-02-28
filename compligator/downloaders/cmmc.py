@@ -17,7 +17,7 @@ from urllib.parse import unquote, urljoin, urlparse
 import requests
 
 if TYPE_CHECKING:
-    from cwm.state import StateFile
+    from compligator.state import StateFile
 
 from .base import (
     REQUEST_TIMEOUT,
