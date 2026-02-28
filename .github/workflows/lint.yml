@@ -15,4 +15,4 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install ruff
-      - run: ruff check comply_with_me/
+      - run: ruff check compligator/

@@ -4,7 +4,7 @@
 
 ISO/IEC 27001 (Information Security Management Systems) and ISO/IEC 27002 (Security Controls) are published by the International Organization for Standardization (ISO). They are **not freely available** — purchase is required from ISO or an authorized national standards body.
 
-comply-with-me cannot automate the download of paywalled content.
+CompliGator cannot automate the download of paywalled content.
 
 ## How to obtain
 

@@ -1,4 +1,4 @@
-"""Hash-based sync state file for cwm."""
+"""Hash-based sync state file for CompliGator."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_FILENAME = ".cwm-state.json"
+STATE_FILENAME = ".compligator-state.json"
 _SCHEMA_VERSION = 1
 
 
@@ -55,7 +55,7 @@ class StateFile:
         return _sha256(path) == entry["sha256"]
 
     def entries(self) -> dict[str, dict]:
-        """Return a snapshot of all entries (for ``cwm status``)."""
+        """Return a snapshot of all entries (for status display)."""
         with self._lock:
             return dict(self._entries)
 

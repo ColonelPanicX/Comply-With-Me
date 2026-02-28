@@ -36,7 +36,7 @@ SUPPORTED_EXTENSIONS = PDF_EXTENSIONS | HTML_EXTENSIONS | JSON_EXTENSIONS
 KNOWN_UNSUPPORTED = {".zip", ".doc", ".docx", ".xlsx", ".xls", ".xml"}
 
 # Files to always ignore (state files, hidden files, READMEs)
-IGNORE_NAMES = {".cwm-state.json", "README.md"}
+IGNORE_NAMES = {".compligator-state.json", "README.md"}
 
 
 @dataclass
@@ -392,7 +392,7 @@ def normalize_all(
     progress_callback(framework_key, filename) is called before each file
     if provided — useful for live CLI progress reporting.
     """
-    from cwm.downloaders import SERVICES
+    from compligator.downloaders import SERVICES
 
     result = NormalizeResult()
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comply With Me — run with: python3 comply_with_me.py"""
+"""CompliGator — run with: python3 compligator.py"""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-VENV_DIR = SCRIPT_DIR / ".cwm-venv"
+VENV_DIR = SCRIPT_DIR / ".compligator-venv"
 VENV_PYTHON = VENV_DIR / "bin" / "python3"
 
 REQUIRED = [
@@ -61,14 +61,14 @@ def _bootstrap() -> None:
     if not VENV_DIR.exists():
         if not _can_create_venv():
             ver = f"{sys.version_info.major}.{sys.version_info.minor}"
-            print("Comply With Me needs a local environment but cannot create one.\n")
+            print("CompliGator needs a local environment but cannot create one.\n")
             print("On Debian/Ubuntu, install the missing package first:")
             print(f"  sudo apt install python{ver}-venv")
             print("\nThen run the script again.")
             sys.exit(1)
 
         pkg_list = ", ".join(pkg for pkg, _ in REQUIRED)
-        print("Comply With Me needs a local environment to run.\n")
+        print("CompliGator needs a local environment to run.\n")
         print(f"It will be created at: {VENV_DIR}")
         print(f"Packages to install  : {pkg_list}\n")
         try:
@@ -165,9 +165,9 @@ def _in_managed_venv() -> bool:
 if not _in_managed_venv():
     _bootstrap()
 
-# Running inside .cwm-venv — all deps are present
+# Running inside .compligator-venv — all deps are present
 sys.path.insert(0, str(SCRIPT_DIR))
-from cwm.cli import main  # noqa: E402
+from compligator.cli import main  # noqa: E402
 
 if __name__ == "__main__":
     main()

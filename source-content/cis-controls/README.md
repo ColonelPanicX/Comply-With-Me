@@ -2,7 +2,7 @@
 
 ## Why this directory is empty
 
-CIS Controls v8 is published by the Center for Internet Security (CIS). The full controls document is **free to download but requires registration** on the CIS website. Because registration is required, comply-with-me cannot automate the download without credentials.
+CIS Controls v8 is published by the Center for Internet Security (CIS). The full controls document is **free to download but requires registration** on the CIS website. Because registration is required, CompliGator cannot automate the download without credentials.
 
 ## How to obtain
 
