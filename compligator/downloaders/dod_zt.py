@@ -1,9 +1,15 @@
 """DoD Zero Trust and Cybersecurity Directives downloader.
 
-Downloads the DoD Zero Trust Strategy, Zero Trust Reference Architecture,
-and key DoD cybersecurity issuances (DoDI 8500.01, DoDI 8510.01) directly
-from dodcio.defense.gov and esd.whs.mil. All documents are cleared for
-public release with no authentication required.
+Downloads the DoD Zero Trust Strategy from a publicly accessible DTIC mirror.
+The remaining documents (ZT Reference Architecture, DoDI 8500.01, DoDI 8510.01)
+are listed as manual_required — dodcio.defense.gov and esd.whs.mil return 403
+for all automated requests including headless browsers; no working public mirror
+has been identified.
+
+Manual download sources:
+  - ZT RA v2.0:   https://dodcio.defense.gov/Library/
+  - DoDI 8500.01: https://www.esd.whs.mil/Directives/issuances/dodi/
+  - DoDI 8510.01: https://www.esd.whs.mil/Directives/issuances/dodi/
 """
 
 from __future__ import annotations
@@ -23,27 +29,29 @@ SOURCE_URL = "https://dodcio.defense.gov/Library/"
 # Date these URLs were last manually verified.
 KNOWN_DOCS_VERIFIED = "2026-03-01"
 
-# (filename, url)
+# (filename, url) — documents that can be fetched automatically.
+# DoD ZT Strategy is mirrored on DTIC (Defense Technical Information Center),
+# which serves files publicly without WAF restrictions.
 KNOWN_DOCS: list[tuple[str, str]] = [
-    # DoD Zero Trust Strategy (November 2022)
     (
         "DoD-ZT-Strategy.pdf",
-        "https://dodcio.defense.gov/Portals/0/Documents/Library/DoD-ZTStrategy.pdf",
+        "https://apps.dtic.mil/sti/trecms/pdf/AD1205814.pdf",
     ),
-    # DoD Zero Trust Reference Architecture v2.0 (September 2022)
+]
+
+# Documents that require manual download — (filename, source_url).
+MANUAL_DOCS: list[tuple[str, str]] = [
     (
         "DoD-ZT-RA-v2.0.pdf",
-        "https://dodcio.defense.gov/Portals/0/Documents/Library/(U)ZT_RA_v2.0(U)_Sep22.pdf",
+        "https://dodcio.defense.gov/Library/",
     ),
-    # DoDI 8500.01 — Cybersecurity (March 2014, Change 1)
     (
         "DoDI-8500.01.pdf",
-        "https://www.esd.whs.mil/portals/54/documents/dd/issuances/dodi/850001_2014.pdf",
+        "https://www.esd.whs.mil/Directives/issuances/dodi/",
     ),
-    # DoDI 8510.01 — Risk Management Framework (RMF) for DoD Systems
     (
         "DoDI-8510.01.pdf",
-        "https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/851001p.pdf",
+        "https://www.esd.whs.mil/Directives/issuances/dodi/",
     ),
 ]
 
@@ -56,6 +64,10 @@ def run(
 ) -> DownloadResult:
     dest = output_dir / "dod-zt"
     result = DownloadResult(framework="dod-zt")
+
+    # Always surface the manual-required items regardless of dry_run.
+    for filename, source in MANUAL_DOCS:
+        result.manual_required.append((filename, source))
 
     if dry_run:
         for filename, _url in KNOWN_DOCS:

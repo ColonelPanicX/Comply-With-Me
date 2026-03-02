@@ -36,10 +36,7 @@ KNOWN_DOCS: list[tuple[str, str]] = [
         "M-22-09.pdf",
         "https://www.whitehouse.gov/wp-content/uploads/2022/01/M-22-09.pdf",
     ),
-    (
-        "M-23-16.pdf",
-        "https://www.whitehouse.gov/wp-content/uploads/2023/06/M-23-16.pdf",
-    ),
+    # M-23-16 omitted — URL not found on whitehouse.gov; add when verified.
     (
         "M-25-04.pdf",
         "https://www.whitehouse.gov/wp-content/uploads/2025/01/M-25-04-Fiscal-Year-2025-Guidance-on-Federal-Information-Security-and-Privacy-Management-Requirements.pdf",

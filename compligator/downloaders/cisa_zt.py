@@ -1,8 +1,10 @@
 """CISA Zero Trust Maturity Model downloader.
 
-Downloads the CISA Zero Trust Maturity Model (ZTMM) and related ZT
-implementation guidance directly from cisa.gov. All documents are
-publicly accessible with no authentication required.
+Downloads the CISA Zero Trust Maturity Model (ZTMM) from cisa.gov.
+The site uses a WAF that blocks plain HTTP requests — documents are
+served via browser attachment download and require Playwright.
+
+Requires the ``playwright`` extra: pip install playwright && playwright install chromium
 """
 
 from __future__ import annotations
@@ -10,12 +12,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-import requests
-
 if TYPE_CHECKING:
     from compligator.state import StateFile
 
-from .base import DownloadResult, download_file
+from .base import DownloadResult, playwright_download_file
 
 SOURCE_URL = "https://www.cisa.gov/zero-trust-maturity-model"
 
@@ -50,11 +50,10 @@ def run(
         return result
 
     dest.mkdir(parents=True, exist_ok=True)
-    session = requests.Session()
 
     for filename, url in KNOWN_DOCS:
         target = dest / filename
-        ok, msg = download_file(session, url, target, force=force, state=state)
+        ok, msg = playwright_download_file(url, target, force=force, state=state)
         if msg == "skipped":
             result.skipped.append(filename)
         elif ok:

@@ -25,7 +25,7 @@ from .base import (
     REQUEST_TIMEOUT,
     USER_AGENT,
     DownloadResult,
-    download_file,
+    playwright_download_file,
     sanitize_filename,
 )
 
@@ -125,11 +125,10 @@ def run(
         return result
 
     dest.mkdir(parents=True, exist_ok=True)
-    session = requests.Session()
 
     for filename, url in docs:
         target = dest / filename
-        ok, msg = download_file(session, url, target, force=force, referer=SOURCE_URL, state=state)
+        ok, msg = playwright_download_file(url, target, force=force, state=state)
         if msg == "skipped":
             result.skipped.append(filename)
         elif ok:
