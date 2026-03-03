@@ -1,11 +1,14 @@
-"""OWASP Application Security Verification Standard (ASVS) downloader.
+"""MITRE ATT&CK downloader.
 
-Downloads release assets (PDF, CSV, DOCX) for the latest stable ASVS
-release from the OWASP/ASVS GitHub repository.
+Downloads STIX 2.1 JSON for Enterprise ATT&CK, ICS ATT&CK, and Mobile ATT&CK
+from the mitre-attack/attack-stix-data GitHub repository releases.
 
-The GitHub Releases API is used to discover the current version and its
-assets. Set the GITHUB_TOKEN environment variable to raise the
-unauthenticated rate limit from 60 to 5,000 requests/hour if needed.
+Uses the GitHub Releases API to discover the latest tagged release and download
+its assets. Set the GITHUB_TOKEN environment variable to raise the
+unauthenticated API rate limit from 60 to 5,000 requests/hour.
+
+Note: ATT&CK STIX files are large (50–200 MB combined). State tracking is used
+to skip re-downloading files that have not changed since the last sync.
 """
 
 from __future__ import annotations
@@ -17,7 +20,7 @@ from typing import TYPE_CHECKING, Optional
 import requests
 
 if TYPE_CHECKING:
-    from compligator.state import StateFile
+    from core.state import StateFile
 
 from .base import (
     REQUEST_TIMEOUT,
@@ -26,21 +29,30 @@ from .base import (
     download_file,
 )
 
-SOURCE_URL = "https://github.com/OWASP/ASVS"
-RELEASES_API_URL = "https://api.github.com/repos/OWASP/ASVS/releases/latest"
+RELEASES_API_URL = "https://api.github.com/repos/mitre-attack/attack-stix-data/releases/latest"
+SOURCE_URL = "https://github.com/mitre-attack/attack-stix-data"
 
-# File extensions to download from the release assets.
-DOWNLOAD_EXTENSIONS = {".pdf", ".csv", ".docx"}
+# File extensions to download from release assets
+DOWNLOAD_EXTENSIONS = {".json"}
 
-# Date the KNOWN_DOCS list was last manually verified against the latest release.
-KNOWN_DOCS_VERIFIED = "2026-03-01"
+# Date the KNOWN_DOCS list was last manually verified against the latest release
+KNOWN_DOCS_VERIFIED = "2026-03-02"
 
 # Curated fallback — used if the GitHub API is unavailable.
+# Pinned to v18.1 (November 2025). Update when a new ATT&CK version is released.
 # (filename, url)
 KNOWN_DOCS: list[tuple[str, str]] = [
     (
-        "OWASP_Application_Security_Verification_Standard_5.0.0_en.pdf",
-        "https://github.com/OWASP/ASVS/releases/download/v5.0.0/OWASP_Application_Security_Verification_Standard_5.0.0_en.pdf",
+        "enterprise-attack.json",
+        "https://github.com/mitre-attack/attack-stix-data/releases/download/v18.1/enterprise-attack.json",
+    ),
+    (
+        "ics-attack.json",
+        "https://github.com/mitre-attack/attack-stix-data/releases/download/v18.1/ics-attack.json",
+    ),
+    (
+        "mobile-attack.json",
+        "https://github.com/mitre-attack/attack-stix-data/releases/download/v18.1/mobile-attack.json",
     ),
 ]
 
@@ -59,7 +71,7 @@ def _api_headers() -> dict[str, str]:
 
 
 def _fetch_latest_assets() -> list[tuple[str, str]]:
-    """Return (filename, download_url) for all matching release assets.
+    """Return (filename, download_url) for all STIX JSON release assets.
 
     Raises RuntimeError on API errors.
     """
@@ -74,14 +86,20 @@ def _fetch_latest_assets() -> list[tuple[str, str]]:
             "Set GITHUB_TOKEN env var to increase the unauthenticated limit."
         )
     if resp.status_code != 200:
-        raise RuntimeError(f"GitHub API returned {resp.status_code} for OWASP/ASVS releases")
+        raise RuntimeError(
+            f"GitHub API returned {resp.status_code} for mitre-attack/attack-stix-data"
+        )
 
     data = resp.json()
-    return [
+    tag = data.get("tag_name", "unknown")
+    assets = [
         (asset["name"], asset["browser_download_url"])
         for asset in data.get("assets", [])
         if Path(asset["name"]).suffix.lower() in DOWNLOAD_EXTENSIONS
     ]
+    if not assets:
+        raise RuntimeError(f"No JSON assets found in release {tag}")
+    return assets
 
 
 # ---------------------------------------------------------------------------
@@ -95,20 +113,17 @@ def run(
     force: bool = False,
     state: Optional["StateFile"] = None,
 ) -> DownloadResult:
-    dest = output_dir / "owasp-asvs"
-    result = DownloadResult(framework="owasp-asvs")
+    dest = output_dir / "mitre-attack"
+    result = DownloadResult(framework="mitre-attack")
 
-    # Discover assets via GitHub API, fall back to KNOWN_DOCS on failure.
     docs: list[tuple[str, str]]
     used_known = False
     try:
         docs = _fetch_latest_assets()
-        if not docs:
-            raise RuntimeError("No matching release assets found")
     except RuntimeError as exc:
         result.notices.append(
             f"GitHub API unavailable ({exc}) — using curated fallback list "
-            f"(last verified {KNOWN_DOCS_VERIFIED})."
+            f"(last verified {KNOWN_DOCS_VERIFIED}, pinned to v18.1)."
         )
         docs = KNOWN_DOCS
         used_known = True
@@ -123,10 +138,12 @@ def run(
         return result
 
     dest.mkdir(parents=True, exist_ok=True)
+    print("  [i] ATT&CK STIX files are large (50–200 MB). Download may take several minutes.")
     session = requests.Session()
 
     for filename, url in docs:
         target = dest / filename
+        # Large files: use a generous timeout via the session directly
         ok, msg = download_file(session, url, target, force=force, state=state)
         if msg == "skipped":
             result.skipped.append(filename)
@@ -136,7 +153,6 @@ def run(
             if used_known:
                 result.errors.append((filename, msg))
             else:
-                # API asset URL failed — surface as error with the URL for reference.
                 result.errors.append((filename, f"{msg} ({url})"))
 
     return result

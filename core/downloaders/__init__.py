@@ -12,20 +12,26 @@ from . import (
     cisa_zt,
     cjis,
     cmmc,
+    csa_ccm,
+    dfars_far,
     disa,
     dod_zt,
+    executive_orders,
     fedramp,
     fedramp_github,
+    govramp,
     hipaa,
+    mitre_attack,
     nist,
     nist_oscal,
+    nsa,
     omb,
     owasp_asvs,
 )
 from .base import DownloadResult
 
 if TYPE_CHECKING:
-    from compligator.state import StateFile
+    from core.state import StateFile
 
 
 @dataclass(frozen=True)
@@ -59,6 +65,17 @@ SERVICES: list[ServiceDef] = [
     ServiceDef("owasp-asvs", "OWASP ASVS", owasp_asvs.run, "owasp-asvs"),
     ServiceDef("omb", "OMB Cybersecurity Memoranda", omb.run, "omb"),
     ServiceDef("dod-zt", "DoD Zero Trust & Directives", dod_zt.run, "dod-zt"),
+    ServiceDef("govramp", "GovRAMP", govramp.run, "govramp"),
+    ServiceDef("csa-ccm", "CSA Cloud Controls Matrix v4.1", csa_ccm.run, "csa-ccm"),
+    ServiceDef(
+        "executive-orders",
+        "Executive Orders (Cybersecurity)",
+        executive_orders.run,
+        "executive-orders",
+    ),
+    ServiceDef("dfars-far", "DFARS / FAR Cybersecurity Clauses", dfars_far.run, "dfars-far"),
+    ServiceDef("nsa", "NSA Cybersecurity Advisories", nsa.run, "nsa"),
+    ServiceDef("mitre-attack", "MITRE ATT&CK (STIX 2.1)", mitre_attack.run, "mitre-attack"),
 ]
 
 SERVICES_BY_KEY: dict[str, ServiceDef] = {s.key: s for s in SERVICES}
