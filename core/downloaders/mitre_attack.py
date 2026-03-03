@@ -128,10 +128,6 @@ def run(
         docs = KNOWN_DOCS
         used_known = True
 
-    result.notices.append(
-        "ATT&CK STIX files are large (50–200 MB). Download may take several minutes."
-    )
-
     if dry_run:
         for filename, _url in docs:
             target = dest / filename
@@ -142,6 +138,7 @@ def run(
         return result
 
     dest.mkdir(parents=True, exist_ok=True)
+    print("  [i] ATT&CK STIX files are large (50–200 MB). Download may take several minutes.")
     session = requests.Session()
 
     for filename, url in docs:

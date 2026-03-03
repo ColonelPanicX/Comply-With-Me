@@ -21,14 +21,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-import requests
-
 if TYPE_CHECKING:
     from core.state import StateFile
 
 from .base import (
     DownloadResult,
-    download_file,
+    playwright_download_file,
 )
 
 SOURCE_URL = "https://www.nsa.gov/Press-Room/Cybersecurity-Advisories-Guidance/"
@@ -99,11 +97,10 @@ def run(
         return result
 
     dest.mkdir(parents=True, exist_ok=True)
-    session = requests.Session()
 
     for filename, url in KNOWN_DOCS:
         target = dest / filename
-        ok, msg = download_file(session, url, target, force=force, state=state)
+        ok, msg = playwright_download_file(url, target, force=force, state=state)
         if msg == "skipped":
             result.skipped.append(filename)
         elif ok:
