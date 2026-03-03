@@ -2,13 +2,14 @@
 
 Downloads key CNSS instructions from public mirrors. cnss.gov requires a DoD
 root certificate for direct access and is not reachable by standard automation.
-All documents are sourced from publicly accessible government mirrors (dni.gov,
-rmf.org, etc.) and clearly identified as such.
+All documents are sourced from publicly accessible government/institutional
+mirrors and clearly identified as such.
 
 Covered documents:
   - CNSSI 1253  Security Categorization and Control Selection for NSS
+               (Sandia National Laboratories mirror — March 2014 edition)
   - CNSSI 4009  Committee on National Security Systems Glossary
-  - CNSSI 4011  Information Assurance Training (if mirror available)
+               (rmf.org mirror)
 """
 
 from __future__ import annotations
@@ -37,7 +38,8 @@ KNOWN_DOCS_VERIFIED = "2026-03-03"
 KNOWN_DOCS: list[tuple[str, str]] = [
     (
         "CNSSI-1253-Security-Categorization-Control-Selection.pdf",
-        "https://www.dni.gov/files/NCSC/documents/nittf/CNSSI_No1253.pdf",
+        # Sandia National Laboratories public mirror (dni.gov URL no longer active)
+        "https://www.sandia.gov/app/uploads/sites/65/2021/02/CNSSI_No1253.pdf",
     ),
     (
         "CNSSI-4009-National-Information-Assurance-Glossary.pdf",
