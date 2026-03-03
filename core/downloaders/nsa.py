@@ -1,19 +1,17 @@
 """NSA Cybersecurity Advisories & Guidance downloader.
 
-Downloads key NSA cybersecurity advisory PDFs from media.defense.gov.
-
 NSA publishes advisories and guidance documents at media.defense.gov.
+That CDN consistently returns HTTP 403 for all automated access — plain
+requests, Playwright headless (attachment mode), Playwright navigate, and
+Playwright navigate with Referer header all fail identically.
+
+All documents are therefore surfaced as manual_required with their direct
+URLs so users can download them from a browser and place them in the output
+directory.
+
 The nsa.gov/Cybersecurity/Advisories page is JavaScript-rendered and not
-reliably scrapeable; direct known URLs are used instead.
-
-The nsacyber GitHub org (github.com/nsacyber) hosts individual security
-tool repos but does not maintain a consolidated publications release.
-Individual repos with notable guidance (e.g., Hardware-and-Firmware-
-Security-Guidance) may be added as separate entries if needed.
-
-Set the GITHUB_TOKEN environment variable to raise the unauthenticated
-GitHub API rate limit from 60 to 5,000 requests/hour if GitHub sources
-are added in the future.
+reliably scrapeable; the nsacyber GitHub org does not maintain a consolidated
+publications release.
 """
 
 from __future__ import annotations
@@ -24,19 +22,14 @@ from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from core.state import StateFile
 
-from .base import (
-    DownloadResult,
-    playwright_navigate_file,
-)
+from .base import DownloadResult
 
 SOURCE_URL = "https://www.nsa.gov/Press-Room/Cybersecurity-Advisories-Guidance/"
 
-# Date the KNOWN_DOCS list was last manually verified
-KNOWN_DOCS_VERIFIED = "2026-03-02"
-
-# Curated list of key NSA cybersecurity advisory PDFs from media.defense.gov.
+# Curated list of key NSA cybersecurity advisory PDFs.
+# All are on media.defense.gov which blocks automated access (HTTP 403).
 # (filename, url)
-KNOWN_DOCS: list[tuple[str, str]] = [
+MANUAL_DOCS: list[tuple[str, str]] = [
     (
         "NSA-CISA-Top10-Cybersecurity-Misconfigurations.pdf",
         "https://media.defense.gov/2023/Oct/05/2003314578/-1/-1/0/NSA-CISA-Top10-Network-Misconfigurations.PDF",
@@ -79,35 +72,15 @@ def run(
     force: bool = False,
     state: Optional["StateFile"] = None,
 ) -> DownloadResult:
-    dest = output_dir / "nsa"
     result = DownloadResult(framework="nsa")
 
     result.notices.append(
-        f"Using curated advisory list (last verified {KNOWN_DOCS_VERIFIED}). "
-        f"Check {SOURCE_URL} for new advisories not yet in this list."
+        f"media.defense.gov blocks automated access (HTTP 403). "
+        f"Download manually from {SOURCE_URL} and place files in "
+        f"source-content/nsa/."
     )
 
-    if dry_run:
-        for filename, _url in KNOWN_DOCS:
-            target = dest / filename
-            if not force and target.exists() and target.stat().st_size > 0:
-                result.skipped.append(filename)
-            else:
-                result.downloaded.append(filename)
-        return result
-
-    dest.mkdir(parents=True, exist_ok=True)
-
-    for filename, url in KNOWN_DOCS:
-        target = dest / filename
-        ok, msg = playwright_navigate_file(
-            url, target, force=force, referer=SOURCE_URL, state=state
-        )
-        if msg == "skipped":
-            result.skipped.append(filename)
-        elif ok:
-            result.downloaded.append(filename)
-        else:
-            result.errors.append((filename, msg))
+    for filename, url in MANUAL_DOCS:
+        result.manual_required.append((filename, url))
 
     return result
