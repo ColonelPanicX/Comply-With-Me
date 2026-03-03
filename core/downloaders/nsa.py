@@ -100,7 +100,9 @@ def run(
 
     for filename, url in KNOWN_DOCS:
         target = dest / filename
-        ok, msg = playwright_navigate_file(url, target, force=force, state=state)
+        ok, msg = playwright_navigate_file(
+            url, target, force=force, referer=SOURCE_URL, state=state
+        )
         if msg == "skipped":
             result.skipped.append(filename)
         elif ok:

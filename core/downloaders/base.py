@@ -166,6 +166,7 @@ def playwright_navigate_file(
     dest: Path,
     *,
     force: bool = False,
+    referer: Optional[str] = None,
     state: Optional["StateFile"] = None,
 ) -> tuple[bool, str]:
     """Download a URL by navigating to it and capturing the response body directly.
@@ -174,6 +175,9 @@ def playwright_navigate_file(
     but block plain HTTP requests. Unlike playwright_download_file(), this does NOT
     wait for a download event — it captures the raw response bytes from the navigation
     itself. Suitable for direct CDN file URLs (e.g. media.defense.gov).
+
+    If referer is provided it is passed as an HTTP header on the request. Some CDNs
+    (e.g. media.defense.gov) require a matching Referer from the parent site.
 
     Returns (success, message) with the same semantics as download_file().
     """
@@ -192,7 +196,8 @@ def playwright_navigate_file(
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-            ctx = browser.new_context(user_agent=USER_AGENT)
+            extra_headers = {"Referer": referer} if referer else {}
+            ctx = browser.new_context(user_agent=USER_AGENT, extra_http_headers=extra_headers)
             page = ctx.new_page()
             response = page.goto(url, timeout=60_000, wait_until="load")
             if response is None:
