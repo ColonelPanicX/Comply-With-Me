@@ -6,16 +6,61 @@ A self-contained Python tool for downloading, syncing, and normalizing complianc
 
 ## Supported Frameworks
 
-| Framework | Source | Coverage |
-|---|---|---|
-| FedRAMP Rev 5 | fedramp.gov | Documents and templates |
-| FedRAMP Automation (GitHub) | github.com/GSA/fedramp-automation | OSCAL baselines, resources, templates, guides |
-| NIST Final Publications | csrc.nist.gov | SP, CSWP, AI series |
-| NIST Draft Publications | csrc.nist.gov | IPD, 2PD series |
-| NIST OSCAL Content | github.com/usnistgov/oscal-content | SP 800-53, SP 800-171, SP 800-218, CSF v2.0 |
-| CMMC | dodcio.defense.gov | Full document library |
-| DISA STIGs | dl.dod.cyber.mil | Full SRG/STIG library (ZIP) |
-| CISA Binding Operational Directives | cisa.gov | All BODs and implementation guidance (HTML) |
+26 frameworks across 5 groups:
+
+**NIST**
+| Framework | Source |
+|---|---|
+| NIST Final Publications | csrc.nist.gov |
+| NIST Draft Publications | csrc.nist.gov |
+| NIST OSCAL Content | github.com/usnistgov/oscal-content |
+
+**FedRAMP**
+| Framework | Source |
+|---|---|
+| FedRAMP Rev 5 | fedramp.gov |
+| FedRAMP Automation (GitHub) | github.com/GSA/fedramp-automation |
+| GovRAMP | govrampsecurity.com |
+
+**CISA**
+| Framework | Source |
+|---|---|
+| CISA Binding Operational Directives | cisa.gov |
+| CISA Zero Trust Maturity Model | cisa.gov |
+| CISA Known Exploited Vulnerabilities | cisa.gov |
+
+**DoD / Defense**
+| Framework | Source |
+|---|---|
+| CMMC | dodcio.defense.gov |
+| DISA STIGs | dl.dod.cyber.mil |
+| DFARS / FAR Cybersecurity Clauses | acquisition.gov / ecfr.gov |
+| DoD Zero Trust & Directives | dodcio.defense.gov |
+| NSA Cybersecurity Advisories | nsa.gov (manual — WAF protected) |
+| DCSA NISPOM (32 CFR Part 117) | ecfr.gov |
+| CNSS Instructions & Policies | cnss.gov |
+
+**Threat Intel**
+| Framework | Source |
+|---|---|
+| MITRE ATT&CK (STIX 2.1) | github.com/mitre-attack/attack-stix-data |
+
+**Frameworks**
+| Framework | Source |
+|---|---|
+| OWASP ASVS | github.com/OWASP/ASVS |
+| CSA Cloud Controls Matrix v4.1 | cloudsecurityalliance.org |
+| CIS Controls v8 (Structured Data) | github.com/CISecurity/ControlsAssessmentSpecification |
+| PCI DSS v4.0.1 | pcisecuritystandards.org |
+
+**Policy / Regulatory**
+| Framework | Source |
+|---|---|
+| HIPAA Security Rule | govinfo.gov |
+| CJIS Security Policy | fbi.gov |
+| OMB Cybersecurity Memoranda | whitehouse.gov |
+| Executive Orders (Cybersecurity) | federalregister.gov |
+| FTC Safeguards Rule (16 CFR Part 314) | ecfr.gov |
 
 ## Requirements
 
@@ -47,25 +92,42 @@ Every run after that goes straight to the menu — no activation, no setup.
 ```
 CompliGator
 ----------------------------------------------------
-   1. FedRAMP                          36 files   37.5 MB  last synced 2026-02-28
-   2. FedRAMP Automation (GitHub)      21 files   33.7 MB  last synced 2026-02-28
-   3. NIST Final Publications         653 files    2.1 GB  last synced 2026-02-28
-   4. NIST Draft Publications          92 files  146.0 MB  last synced 2026-02-28
-   5. NIST OSCAL Content               12 files   23.8 MB  last synced 2026-02-28
-   6. CMMC                             17 files   18.3 MB  last synced 2026-02-28
-   7. DISA STIGs                        1 files  350.0 MB  last synced 2026-02-28
-   8. CISA Binding Operational Directives  14 files    0.5 MB  last synced 2026-02-28
+  1. NIST                     3 frameworks  last synced 2026-03-03
+  2. FedRAMP                  3 frameworks  last synced 2026-03-03
+  3. CISA                     3 frameworks  last synced 2026-03-02
+  4. DoD / Defense            7 frameworks  last synced 2026-03-03
+  5. Threat Intel             1 framework   last synced 2026-03-03
+  6. Frameworks               4 frameworks  last synced 2026-03-03
+  7. Policy / Regulatory      5 frameworks  last synced 2026-03-03
 
-   9. Sync All
-  10. Normalize Downloaded Documents
-   0. Quit
-
-Select:
+──────────────────────────────────────────────────────────────────────
+  s = sync all  |  n = normalize all  |  c = check for updates  |  q = quit
+──────────────────────────────────────────────────────────────────────
 ```
 
-Select a number to sync a single framework, choose **Sync All** to pull everything at once, or choose **Normalize Downloaded Documents** to convert your downloads to Markdown and JSON.
+Select a group number to open it, then choose a framework to sync individually or press `s` to sync the whole group. From the main menu:
 
-Downloaded files land in `source-content/<framework>/`. The tool skips files it already has and only fetches what's changed or new.
+- **`s`** — sync all 26 frameworks
+- **`n`** — normalize all downloaded documents
+- **`c`** — quick scan: check for updates without downloading (see below)
+- **`q`** — quit
+
+### Quick Scan
+
+Press `c` from the main menu to run a read-only update check against 4 high-churn targets without downloading anything:
+
+```
+Quick scan — checking for updates...
+
+  CISA Known Exploited Vulnerabilities     up to date  (2 files)  last synced 2026-03-02
+  FedRAMP Automation (GitHub)              up to date  (21 files)  last synced 2026-03-02
+  NSA Cybersecurity Advisories             7 docs require manual download  never synced
+  OWASP ASVS                               up to date  (4 files)  last synced 2026-03-02
+
+  Note: NIST Drafts excluded from quick scan (requires full crawl — use Sync to update).
+```
+
+No files are written and the state file is unchanged after a scan.
 
 ## Normalization
 
@@ -95,14 +157,14 @@ Each source file produces two output files in `normalized-content/`:
 }
 ```
 
-> **Note:** DISA STIGs are excluded from v1 normalization — their XCCDF XML structure requires a dedicated parser.
+> **Note:** DISA STIGs are excluded from normalization — their XCCDF XML structure requires a dedicated parser (planned for v2).
 
 ## How It Works
 
 - **State tracking:** A `.compligator-state.json` file in `source-content/` records the hash and metadata of every downloaded file. On each sync, files are compared by hash — unchanged files are skipped.
 - **Normalization:** Already-normalized files are skipped on re-runs. Run normalize again after syncing new documents to catch additions.
 - **WAF fallback:** Several sources use WAF protection that blocks automated scrapers. CompliGator uses a three-tier strategy: plain HTTP → Playwright headless browser → curated fallback URL list. A notice is printed when the fallback list is used, along with the date it was last verified.
-- **GitHub sources:** FedRAMP Automation and NIST OSCAL content are discovered via the GitHub API and downloaded from `raw.githubusercontent.com`. Set `GITHUB_TOKEN` in your environment to raise the unauthenticated rate limit from 60 to 5,000 requests/hour if needed.
+- **GitHub sources:** FedRAMP Automation, NIST OSCAL, MITRE ATT&CK, OWASP ASVS, and CIS Controls are discovered via the GitHub API. Set `GITHUB_TOKEN` in your environment to raise the unauthenticated rate limit from 60 to 5,000 requests/hour if needed.
 - **DISA STIGs:** Downloads the full SRG/STIG archive ZIP from the DoD Cyber Exchange (~350 MB).
 
 ## Output Structure
@@ -116,6 +178,7 @@ source-content/
 │   ├── resources/
 │   ├── templates/
 │   └── guides/
+├── govramp/
 ├── nist/
 │   ├── final-pubs/
 │   └── draft-pubs/
@@ -124,41 +187,34 @@ source-content/
 │   ├── SP800-171/rev3/
 │   ├── SP800-218/ver1/
 │   └── CSF/v2.0/
+├── cisa-bod/
+├── cisa-zt/
+├── cisa-kev/
 ├── cmmc/
 ├── disa-stigs/
-└── cisa-bod/
-
-normalized-content/
-├── fedramp/
-├── fedramp-github/
-│   └── baselines/
-├── nist/
-│   ├── final-pubs/
-│   └── draft-pubs/
-├── nist-oscal/
-│   ├── SP800-53/rev5/
-│   └── ...
-├── cmmc/
-└── cisa-bod/
+├── dfars-far/
+├── dod-zt/
+├── nsa/
+├── nispom/
+├── cnss/
+├── mitre-attack/
+├── owasp-asvs/
+├── csa-ccm/
+├── cis-controls/
+├── pci-dss/
+├── hipaa/
+├── cjis/
+├── omb/
+├── executive-orders/
+└── ftc-safeguards/
 ```
-
-## Manually Supplied Frameworks
-
-Some frameworks cannot be automatically downloaded due to paywalls or registration requirements. Placeholder directories with instructions are included for:
-
-- `source-content/hipaa/` — HIPAA Security Rule (free, no automated downloader yet)
-- `source-content/iso-27k/` — ISO/IEC 27001 & 27002 (paywalled)
-- `source-content/pci-dss/` — PCI DSS v4.0 (registration required)
-- `source-content/cis-controls/` — CIS Controls v8 (registration required)
-- `source-content/soc2/` — SOC 2 TSC (paywalled)
-
-Drop PDFs into these directories — CompliGator's normalize command will pick them up.
 
 ## Known Limitations
 
+- **NSA Cybersecurity Advisories:** media.defense.gov blocks all automated download approaches. Files must be downloaded manually and dropped into `source-content/nsa/`. Quick scan reports the count of available advisories.
 - **DISA STIGs:** The probe logic searches recent months for the current archive filename. If DISA changes their naming convention, the downloader may need an update.
 - **CMMC:** If live scraping and Playwright both fail, a fallback URL list is used. The tool prints a notice with the date the list was last verified.
-- **CISA BOD:** 3 of 17 known BOD pages use an older URL format that returns 403 even via Playwright. They remain in the known-URLs list for manual reference.
+- **CISA BOD:** A small number of known BOD pages return 403 even via Playwright and remain in the known-URLs list for manual reference.
 - **NIST:** A small number of publications have no direct download link on CSRC and will be skipped.
 - **Normalization — scanned PDFs:** Image-only PDFs (no text layer) produce empty or minimal output. OCR is not included in v1.
 - **OSCAL:** FedRAMP extension and template JSON files are not OSCAL catalogs or profiles and are intentionally skipped during normalization.
