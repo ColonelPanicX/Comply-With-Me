@@ -386,17 +386,21 @@ def normalize_all(
     output_dir: Path,
     force: bool = False,
     progress_callback=None,
+    services=None,
 ) -> NormalizeResult:
     """Walk source_dir by framework subdir and normalize all supported files.
 
     progress_callback(framework_key, filename) is called before each file
     if provided — useful for live CLI progress reporting.
+
+    services: optional list of ServiceDef to restrict normalization to a subset
+    (e.g. a single menu group). If None, all registered services are processed.
     """
     from core.downloaders import SERVICES
 
     result = NormalizeResult()
 
-    for svc in SERVICES:
+    for svc in (services if services is not None else SERVICES):
         if svc.subdir in SKIP_SUBDIRS:
             continue
 

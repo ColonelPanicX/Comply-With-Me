@@ -25,6 +25,7 @@ class StateFile:
         self._path = output_dir / STATE_FILENAME
         self._lock = threading.Lock()
         self._entries: dict[str, dict] = {}
+        self._service_totals: dict[str, int] = {}
         self._load()
 
     # ------------------------------------------------------------------
@@ -58,6 +59,17 @@ class StateFile:
         """Return a snapshot of all entries (for status display)."""
         with self._lock:
             return dict(self._entries)
+
+    def get_service_total(self, key: str) -> int:
+        """Return the last-known expected doc count for a service, or 0 if unknown."""
+        with self._lock:
+            return self._service_totals.get(key, 0)
+
+    def set_service_total(self, key: str, total: int) -> None:
+        """Record the total number of docs attempted for a service after a sync."""
+        with self._lock:
+            self._service_totals[key] = total
+            self._save()
 
     # ------------------------------------------------------------------
     # Public write API
@@ -100,14 +112,20 @@ class StateFile:
             raw = json.loads(self._path.read_text(encoding="utf-8"))
             if raw.get("schema_version") == _SCHEMA_VERSION:
                 self._entries = raw.get("entries", {})
+                self._service_totals = raw.get("service_totals", {})
         except (json.JSONDecodeError, OSError, KeyError):
             self._entries = {}
+            self._service_totals = {}
 
     def _save(self) -> None:
         """Write state to disk atomically. Caller must hold self._lock."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(
-            {"schema_version": _SCHEMA_VERSION, "entries": self._entries},
+            {
+                "schema_version": _SCHEMA_VERSION,
+                "entries": self._entries,
+                "service_totals": self._service_totals,
+            },
             indent=2,
             ensure_ascii=False,
         )

@@ -38,6 +38,9 @@ def _check_dependencies() -> None:
 # Display helpers
 # ---------------------------------------------------------------------------
 
+_BAR = "─" * 70
+
+
 def _human_size(n: int) -> str:
     size = float(n)
     for unit in ("B", "KB", "MB", "GB"):
@@ -47,7 +50,7 @@ def _human_size(n: int) -> str:
     return f"{size:.1f} TB"
 
 
-def _svc_info(svc, entries: dict) -> str:
+def _svc_info(svc, entries: dict, state) -> str:
     """Return a short sync-status string for one service."""
     prefix = svc.subdir + "/"
     svc_entries = {k: v for k, v in entries.items() if k.startswith(prefix)}
@@ -55,7 +58,9 @@ def _svc_info(svc, entries: dict) -> str:
         count = len(svc_entries)
         size  = _human_size(sum(e["size"] for e in svc_entries.values()))
         last  = max(e["recorded_at"] for e in svc_entries.values())[:10]
-        return f"{count} files  {size}  last synced {last}"
+        total = state.get_service_total(svc.key)
+        count_str = f"{count}/{total}" if total else str(count)
+        return f"{count_str} files  {size}  last synced {last}"
     return "never synced"
 
 
@@ -81,28 +86,24 @@ def _print_group_menu(groups: list[str], services_by_group: dict, entries: dict)
     for i, group in enumerate(groups, 1):
         info = _group_info(services_by_group[group], entries)
         print(f"  {i}. {group:<24} {info}")
-
-    sync_all_n  = len(groups) + 1
-    normalize_n = len(groups) + 2
     print()
-    print(f"  {sync_all_n}. Sync All Frameworks")
-    print(f"  {normalize_n}. Normalize Downloaded Documents")
-    print("  0. Quit")
+    print(_BAR)
+    print("  s = sync all  |  n = normalize all  |  q = quit")
+    print(_BAR)
     print()
 
 
-def _print_framework_menu(group: str, svcs: list, entries: dict) -> None:
+def _print_framework_menu(group: str, svcs: list, entries: dict, state) -> None:
     print()
     print(group)
     print("-" * 52)
     for i, svc in enumerate(svcs, 1):
-        info = _svc_info(svc, entries)
+        info = _svc_info(svc, entries, state)
         print(f"  {i}. {svc.label:<36} {info}")
-
-    sync_group_n = len(svcs) + 1
     print()
-    print(f"  {sync_group_n}. Sync All {group}")
-    print("  0. Back")
+    print(_BAR)
+    print("  s = sync all  |  n = normalize  |  b = back  |  x = main menu  |  q = quit")
+    print(_BAR)
     print()
 
 
@@ -132,11 +133,18 @@ def _run_sync(svc, output_dir: Path, state) -> None:
             print()
             for notice in result.notices:
                 print(f"  [!] {notice}")
+
+        # Record total attempted (downloaded + skipped + errors) for X/Y display.
+        # manual_required docs are not attempted by the tool so are excluded.
+        total = len(result.downloaded) + len(result.skipped) + len(result.errors)
+        if total > 0:
+            state.set_service_total(svc.key, total)
+
     except Exception as exc:  # noqa: BLE001
         print(f" failed.\n  Error: {exc}")
 
 
-def _run_normalize(source_dir: Path, output_dir: Path) -> None:
+def _run_normalize(source_dir: Path, output_dir: Path, services=None, label: str = "all") -> None:
     from core.normalizer import normalize_all
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -148,12 +156,15 @@ def _run_normalize(source_dir: Path, output_dir: Path) -> None:
             seen_frameworks.add(framework_key)
             print(f"  Normalizing {framework_key}...", flush=True)
 
-    print("Normalizing downloaded documents...")
+    print(f"Normalizing {label} documents...")
     print("  (This may take a while for large collections.)")
     print()
 
     try:
-        result = normalize_all(source_dir, output_dir, force=False, progress_callback=_progress)
+        result = normalize_all(
+            source_dir, output_dir, force=False,
+            progress_callback=_progress, services=services,
+        )
     except Exception as exc:  # noqa: BLE001
         print(f"  Normalization failed: {exc}")
         return
@@ -192,63 +203,56 @@ def main() -> None:
     source_dir.mkdir(parents=True, exist_ok=True)
     state = StateFile(source_dir)
 
-    sync_all_n  = len(GROUPS) + 1
-    normalize_n = len(GROUPS) + 2
-
     while True:
         _print_group_menu(GROUPS, SERVICES_BY_GROUP, state.entries())
 
         try:
-            choice = input("Select: ").strip()
+            choice = input("Select: ").strip().lower()
         except (KeyboardInterrupt, EOFError):
             print("\nGoodbye.")
             break
 
-        if choice == "0":
+        if choice in ("q", "0"):
             print("Goodbye.")
             break
 
-        if not choice.isdigit():
-            print("Invalid selection.")
-            continue
-
-        n = int(choice)
-
-        if n == sync_all_n:
+        if choice == "s":
             for svc in SERVICES:
                 _run_sync(svc, source_dir, state)
 
-        elif n == normalize_n:
+        elif choice == "n":
             _run_normalize(source_dir, normalized_dir)
 
-        elif 1 <= n <= len(GROUPS):
-            group = GROUPS[n - 1]
+        elif choice.isdigit() and 1 <= int(choice) <= len(GROUPS):
+            group = GROUPS[int(choice) - 1]
             svcs  = SERVICES_BY_GROUP[group]
 
             while True:
-                _print_framework_menu(group, svcs, state.entries())
+                _print_framework_menu(group, svcs, state.entries(), state)
 
                 try:
-                    sub = input("Select: ").strip()
+                    sub = input("Select: ").strip().lower()
                 except (KeyboardInterrupt, EOFError):
                     print()
                     break
 
-                if sub == "0":
+                if sub in ("b", "x", "0"):
                     break
 
-                if not sub.isdigit():
-                    print("Invalid selection.")
-                    continue
+                if sub == "q":
+                    print("Goodbye.")
+                    sys.exit(0)
 
-                m = int(sub)
-                sync_group_n = len(svcs) + 1
-
-                if 1 <= m <= len(svcs):
-                    _run_sync(svcs[m - 1], source_dir, state)
-                elif m == sync_group_n:
+                if sub == "s":
                     for svc in svcs:
                         _run_sync(svc, source_dir, state)
+
+                elif sub == "n":
+                    _run_normalize(source_dir, normalized_dir, services=svcs, label=group)
+
+                elif sub.isdigit() and 1 <= int(sub) <= len(svcs):
+                    _run_sync(svcs[int(sub) - 1], source_dir, state)
+
                 else:
                     print("Invalid selection.")
 
