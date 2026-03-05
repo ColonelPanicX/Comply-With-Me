@@ -209,11 +209,18 @@ def _requests_download(
     force: bool,
     state: Optional["StateFile"] = None,
 ) -> DownloadResult:
-    """Download files via plain HTTP requests."""
+    """Download files via plain HTTP requests.
+
+    dodcio.defense.gov is known to block server/cloud IPs at the network level —
+    those URLs are marked manual_required immediately without attempting a download.
+    """
     result = DownloadResult(framework="cmmc")
     session = requests.Session()
 
     for _section, filename, url in links:
+        if "dodcio.defense.gov" in url:
+            result.manual_required.append((filename, url))
+            continue
         target = dest / filename
         ok, msg = download_file(session, url, target, force=force, referer=SOURCE_URL, state=state)
         if msg == "skipped":
