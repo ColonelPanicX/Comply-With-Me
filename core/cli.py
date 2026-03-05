@@ -111,7 +111,7 @@ def _print_framework_menu(group: str, svcs: list, entries: dict, state) -> None:
 # Sync / normalize actions
 # ---------------------------------------------------------------------------
 
-def _run_sync(svc, output_dir: Path, state) -> None:
+def _run_sync(svc, output_dir: Path, state):
     print(f"Syncing {svc.label}...", end="", flush=True)
     try:
         result = svc.runner(output_dir, dry_run=False, force=False, state=state)
@@ -139,9 +139,11 @@ def _run_sync(svc, output_dir: Path, state) -> None:
         total = len(result.downloaded) + len(result.skipped) + len(result.errors)
         if total > 0:
             state.set_service_total(svc.key, total)
+        return result
 
     except Exception as exc:  # noqa: BLE001
         print(f" failed.\n  Error: {exc}")
+        return None
 
 
 def _run_normalize(source_dir: Path, output_dir: Path, services=None, label: str = "all") -> None:
@@ -240,9 +242,11 @@ def main() -> None:
 
     # Lazy imports — only reached if dependencies are present
     from core.downloaders import GROUPS, SERVICES, SERVICES_BY_GROUP
+    from core.reporter import build_report, save_report, slugify
     from core.state import StateFile
 
     source_dir = Path("source-content")
+    report_dir = Path("reports")
     normalized_dir = Path("normalized-content")
     source_dir.mkdir(parents=True, exist_ok=True)
     state = StateFile(source_dir)
@@ -261,8 +265,15 @@ def main() -> None:
             break
 
         if choice == "s":
+            sync_results = []
             for svc in SERVICES:
-                _run_sync(svc, source_dir, state)
+                sync_results.append((svc, _run_sync(svc, source_dir, state)))
+            screen_text, full_md = build_report(sync_results, "Complete Sync")
+            report_path = save_report(full_md, report_dir, "complete")
+            print()
+            print(screen_text)
+            print(f"  Report saved: {report_path}")
+            print()
 
         elif choice == "n":
             _run_normalize(source_dir, normalized_dir)
@@ -291,8 +302,15 @@ def main() -> None:
                     sys.exit(0)
 
                 if sub == "s":
+                    sync_results = []
                     for svc in svcs:
-                        _run_sync(svc, source_dir, state)
+                        sync_results.append((svc, _run_sync(svc, source_dir, state)))
+                    screen_text, full_md = build_report(sync_results, f"{group} Sync")
+                    report_path = save_report(full_md, report_dir, slugify(group))
+                    print()
+                    print(screen_text)
+                    print(f"  Report saved: {report_path}")
+                    print()
 
                 elif sub == "n":
                     _run_normalize(source_dir, normalized_dir, services=svcs, label=group)
