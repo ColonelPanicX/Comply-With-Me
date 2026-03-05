@@ -32,7 +32,7 @@ from .base import (
     sanitize_filename,
 )
 
-SOURCE_URL = "https://www.cisa.gov/emergency-directives"
+SOURCE_URL = "https://www.cisa.gov/news-events/directives"
 BASE_URL = "https://www.cisa.gov"
 
 # URL path prefix that all ED detail pages share
