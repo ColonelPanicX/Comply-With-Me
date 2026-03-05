@@ -129,6 +129,28 @@ Quick scan — checking for updates...
 
 No files are written and the state file is unchanged after a scan.
 
+## Sync Reports
+
+After every sync — whether a single group or all frameworks — CompliGator prints a compact summary to the console and saves a full report to `reports/`:
+
+```
+  Sync report:
+
+  FedRAMP                      36/36
+  FedRAMP Automation (GitHub)  21/21
+  GovRAMP                      34/34
+
+  Report saved: reports/fedramp-sync-report-03.05.2026.md
+```
+
+Each report is a Markdown file named `<group>-sync-report-MM.DD.YYYY.md` (e.g. `complete-sync-report-03.05.2026.md` for a full sync). It contains:
+
+- **Section 1 — Summary:** table of all synced frameworks with file counts and manual-download flags
+- **Section 2+ — Per-framework detail:** per-file status table (Available / Missing) for every framework
+- **Appendix A — Missing Documents:** error details and manual download URLs for anything that couldn't be retrieved automatically
+
+The `reports/` directory is created automatically on first use.
+
 ## Normalization
 
 The **Normalize** option converts downloaded documents into machine-readable formats suitable for AI pipelines, RAG systems, and MCP servers:
@@ -170,6 +192,10 @@ Each source file produces two output files in `normalized-content/`:
 ## Output Structure
 
 ```
+reports/
+├── complete-sync-report-MM.DD.YYYY.md
+└── fedramp-sync-report-MM.DD.YYYY.md
+
 source-content/
 ├── .compligator-state.json
 ├── fedramp/
