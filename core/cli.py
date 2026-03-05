@@ -122,8 +122,8 @@ def _run_sync(svc, output_dir: Path, state):
             print(f"  Up to date : {len(result.skipped)}")
         if result.errors:
             print(f"  Errors     : {len(result.errors)}")
-            for name, err in result.errors:
-                print(f"    {name}: {err}")
+            for e in result.errors:
+                print(f"    {e[0]}: {e[1]}")
         if result.manual_required:
             print("  Manual download required:")
             for label, url in result.manual_required:
