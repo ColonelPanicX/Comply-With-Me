@@ -258,9 +258,11 @@ def run(
                 result.downloaded.append(filename)
         if used_known_urls:
             result.notices.append(
-                f"Automated download unavailable — DoD portal blocked access. "
-                f"Used last-known-good URL list (last verified {KNOWN_URLS_VERIFIED}). "
-                f"See source-content/cmmc/_known-urls.txt for the full URL list."
+                f"Automated download unavailable — dodcio.defense.gov blocks server/cloud IPs "
+                f"at the network level (HTTP 403 regardless of tool or headers). "
+                f"Download manually from a browser on a local machine. "
+                f"URLs last verified {KNOWN_URLS_VERIFIED}; "
+                f"see source-content/cmmc/_known-urls.txt for the full list."
             )
         return result
 
@@ -269,8 +271,10 @@ def run(
     result = _requests_download(links, dest, force, state)
     if used_known_urls:
         result.notices.append(
-            f"Automated download unavailable — DoD portal blocked access. "
-            f"Used last-known-good URL list (last verified {KNOWN_URLS_VERIFIED}). "
-            f"See source-content/cmmc/_known-urls.txt for the full URL list."
+            f"Automated download unavailable — dodcio.defense.gov blocks server/cloud IPs "
+            f"at the network level (HTTP 403 regardless of tool or headers). "
+            f"Download manually from a browser on a local machine. "
+            f"URLs last verified {KNOWN_URLS_VERIFIED}; "
+            f"see source-content/cmmc/_known-urls.txt for the full list."
         )
     return result
