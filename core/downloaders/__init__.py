@@ -15,6 +15,7 @@ from . import (
     cjis,
     cmmc,
     cnss,
+    common_criteria,
     csa_ccm,
     dfars_far,
     disa,
@@ -25,6 +26,8 @@ from . import (
     ftc_safeguards,
     govramp,
     hipaa,
+    iec62443,
+    iso27k,
     mitre_attack,
     nispom,
     nist,
@@ -58,6 +61,7 @@ GROUPS: list[str] = [
     "Threat Intel",
     "Frameworks",
     "Policy / Regulatory",
+    "International Standards",
 ]
 
 SERVICES: list[ServiceDef] = [
@@ -130,6 +134,19 @@ SERVICES: list[ServiceDef] = [
     ServiceDef(
         "ftc-safeguards", "FTC Safeguards Rule (16 CFR Part 314)",
         ftc_safeguards.run, "ftc-safeguards", "Policy / Regulatory",
+    ),
+    # ── International Standards ───────────────────────────────────────────────
+    ServiceDef(
+        "iso27k", "ISO/IEC 27000 Series",
+        iso27k.run, "iso27k", "International Standards",
+    ),
+    ServiceDef(
+        "iec62443", "IEC 62443 (IACS Security)",
+        iec62443.run, "iec62443", "International Standards",
+    ),
+    ServiceDef(
+        "common-criteria", "Common Criteria (ISO/IEC 15408)",
+        common_criteria.run, "common-criteria", "International Standards",
     ),
 ]
 
